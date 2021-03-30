@@ -1,4 +1,3 @@
-from ast import literal_eval
 from random import choice
 from requests import get
 
@@ -9,7 +8,7 @@ api_list = ['https://thefact.space/random',
 # Return a tuple of the fact text and source url
 def get_random_fact():
     response = get(choice(api_list))
-    content_dict = literal_eval(response.text)
+    content_dict = response.json()
     if 'source_url' in content_dict:
         return content_dict['text'], content_dict['source_url'].replace('\\', '')
     else:

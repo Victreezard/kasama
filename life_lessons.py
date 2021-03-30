@@ -1,1 +1,1 @@
-#get topics from LPT subreddit
+#get topics from random life lessons source(s)
