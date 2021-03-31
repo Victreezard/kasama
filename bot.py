@@ -6,7 +6,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from random_facts import get_random_fact
 from randomizer import randomize
-from valheim_api import search as valsearch
+from valheim_api import search_page as valsearch, get_page_details as valget
 
 
 load_dotenv()
@@ -29,19 +29,27 @@ async def search_val(ctx, query):
     if type(results) is list:
         # Join results hyperlinks with newlines
         results = '\n'.join(
-            [f"[{result}]({val_wiki}/{result.replace(' ', '_')})" for result in results])
+            [f"[**{result}**]({val_wiki}/{result.replace(' ', '_')})" for result in results])
         embed = discord.Embed(
             title=f'Results for *{query}*', description=results, color=Color.blurple())
     else:
         embed = discord.Embed(title=results, color=Color.red())
+    embed.set_footer(text=f'Requested by {ctx.author.display_name}')
     await ctx.send(embed=embed)
 
 
 @bot.command(name='valget', help=f'Display info about an item from the {val_wiki} wiki')
 async def get_val(ctx, query):
-        #do something here
-    embed = discord.Embed(title='test', color=Color.red())
+    results = valget(query)
+    if type(results) is dict:
+        embed = discord.Embed(title=results['title'], url=f"{val_wiki}/wiki/{results['title']}",
+                              description=f"Found in {results['categories']}", color=Color.blue())
+    if results['thumbnail']:
+        embed.set_thumbnail(url=results['thumbnail'])
+
+    embed.set_footer(text=f'Requested by {ctx.author.display_name}')
     await ctx.send(embed=embed)
+
 
 @bot.command(name='factme', help='Responds with a random fact and its source')
 async def get_fact(ctx):
