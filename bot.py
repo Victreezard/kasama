@@ -24,8 +24,8 @@ async def on_ready():
 
 
 @bot.command(name='valsearch', help=f'Search from the {val_wiki} wiki')
-async def search_val(ctx, query):
-    results = valsearch(query)
+async def search_val(ctx, *query):
+    results = valsearch(' '.join(query))
     if type(results) is list:
         # Join results hyperlinks with newlines
         results = '\n'.join(
@@ -39,13 +39,21 @@ async def search_val(ctx, query):
 
 
 @bot.command(name='valget', help=f'Display info about an item from the {val_wiki} wiki')
-async def get_val(ctx, query):
-    results = valget(query)
+async def get_val(ctx, *query):
+    results = valget(' '.join(query))
     if type(results) is dict:
-        embed = discord.Embed(title=results['title'], url=f"{val_wiki}/wiki/{results['title']}",
-                              description=f"Found in {results['categories']}", color=Color.blue())
-    if results['thumbnail']:
-        embed.set_thumbnail(url=results['thumbnail'])
+        embed = discord.Embed(title=results['title'], url=results['url'],
+                              description=results['description'], color=Color.purple())
+
+        for name, value in results['fields'].items():
+            if type(value) is list:
+                value = '\n'.join(value)
+            embed.add_field(name=name, value=value)
+
+        if results['thumbnail']:
+            embed.set_thumbnail(url=results['thumbnail'])
+    else:
+        embed = discord.Embed(title=f'{results}', color=Color.red())
 
     embed.set_footer(text=f'Requested by {ctx.author.display_name}')
     await ctx.send(embed=embed)
@@ -56,7 +64,7 @@ async def get_fact(ctx):
     fact_title = 'Fact You'
     fact_text, fact_url = get_random_fact()
     embed = discord.Embed(title=fact_title, url=fact_url,
-                          description=fact_text, color=Color.green())
+                          description=fact_text, color=Color.random())
     await ctx.send(embed=embed)
 
 
