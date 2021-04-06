@@ -25,7 +25,8 @@ async def on_ready():
 
 @bot.command(name='valsearch', help=f'Search from the {val_wiki} wiki')
 async def search_val(ctx, *query):
-    results = valsearch(' '.join(query))
+    query = ' '.join(query)
+    results = valsearch(query)
     if type(results) is list:
         # Join results hyperlinks with newlines
         results = '\n'.join(
@@ -44,11 +45,12 @@ async def get_val(ctx, *query):
     if type(results) is dict:
         embed = discord.Embed(title=results['title'], url=results['url'],
                               description=results['description'], color=Color.purple())
+        if results.get('fields'):
+            for name, value in results['fields'].items():
+                if type(value) is list:
+                    value = '\n'.join(value)
 
-        for name, value in results['fields'].items():
-            if type(value) is list:
-                value = '\n'.join(value)
-            embed.add_field(name=name, value=value)
+                embed.add_field(name=name, value=value)
 
         if results['thumbnail']:
             embed.set_thumbnail(url=results['thumbnail'])

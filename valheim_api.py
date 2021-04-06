@@ -48,12 +48,12 @@ def _get_infobox(html, details):
 
     field_name_sub_pattern = r'(?<=pi-data-label ).+?(?=">)'
     html = sub(field_name_sub_pattern, '', html)
-    field_name_pattern = r'(?<=pi-data-label ">).+(?=<\/)'
+    field_name_pattern = r'(?<=pi-data-label ">).+(?=</)'
     field_names = findall(field_name_pattern, html)
 
     field_value_sub_pattern = r'(?<=pi-data-value ).+?(?=">)'
     html = sub(field_value_sub_pattern, '', html)
-    field_value_pattern = r'(?<=pi-data-value ">).+(?=<\/\w+>)'
+    field_value_pattern = r'(?<=pi-data-value ">).+(?=</\w+>)'
     field_values = findall(field_value_pattern, html)
 
     html_tag_pattern = r'<.+?>'
@@ -104,14 +104,63 @@ def get_page_details(title):
         'description': '',
         'fields': {},
     }
-
     # If image thumbnail exists get details from page's infobox (the space is intentional)
     thumbnail_attribute = ' image-thumbnail'
     if thumbnail_attribute in html:
         details = _get_infobox(html, details)
+    else:
+        html = html.replace('\n', '')
+        html_tag_pattern = r'<.+?>'
+        description_pattern = r'(?<=parser-output">)<p>.+?</p>'
+        description_match = search(description_pattern, html)
+        if description_match is not None:
+            details['description'] = sub(
+                html_tag_pattern, '', description_match.group())
+            html = html[description_match.end():]
+
+        headline_class = 'mw-headline'
+        if headline_class in html:
+            pre_pattern = r'<(/)?pre>'
+            if '<pre>' in html:
+                html = sub(pre_pattern, r'<\1p>', html)
+
+            field_pattern = r'mw-headline.+?(?=<span class="mw-headline"|$)'
+            field_name_pattern = r'(?<=>).+?(?=</span>)'
+            field_value_pattern = r'(?<=<p>).+?(?=</p>)'
+
+            fields = findall(field_pattern, html)
+            field_name = []
+            field_value = []
+            for field in fields:
+                field_name.append(findall(field_name_pattern, field)[0])
+                field_value.append(
+                    ' '.join(findall(field_value_pattern, field)))
+
+            html_tag_pattern = r'<.+?>'
+            for (name, value) in zip(field_name, field_value):
+                if search(html_tag_pattern, value) is not None:
+                    value = sub(html_tag_pattern, '', value)
+                details['fields'].update({name: value})
+
+        else:
+            details.pop('fields')
+            p_pattern = '(?<=<p>).+?(?=</p>)'
+            values = findall(p_pattern, html)
+            # There is truly an invisible character in between the single quotes
+            # convert to string then use literal eval to avoid loop
+            for value in values:
+                if search(html_tag_pattern, value) is not None:
+                    value = sub(html_tag_pattern, '', value)
+                    if value == '':
+                        value = '*Unable to parse content*'
+                # Use incrementing invisible characters as field names for now
+                details['description'] += '\n' + value
 
     return details
 
 
 if __name__ == "__main__":
-    print(get_page_details('valheim'))
+    # print(get_page_details('valheim'))
+    print(get_page_details('haldor'))
+    # print(get_page_details('bronze armor'))
+    # print(get_page_details('the elder power'))
