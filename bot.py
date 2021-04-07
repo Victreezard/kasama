@@ -6,7 +6,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from random_facts import get_random_fact
 from randomizer import randomize
-from valheim_api import search_page as valsearch, get_page_details as valget
+from valheim_api import search_pages as valsearch, get_page as valget
 
 
 load_dotenv()
@@ -14,7 +14,13 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
 bot = commands.Bot(command_prefix='!')
-val_wiki = 'https://valheim.fandom.com'
+wiki_url = 'https://valheim.fandom.com/'
+
+
+def _create_wiki_url(title):
+    if ' ' in title:
+        title = title.replace(' ', '_')
+    return wiki_url + title
 
 
 @bot.event
@@ -23,14 +29,14 @@ async def on_ready():
     print(f'{bot.user} is connected to the guild {guild.name} (id: {guild.id})')
 
 
-@bot.command(name='valsearch', help=f'Search from the {val_wiki} wiki')
+@bot.command(name='valsearch', help=f'Search and return a list of pages from the {wiki_url} wiki')
 async def search_val(ctx, *query):
     query = ' '.join(query)
     results = valsearch(query)
     if type(results) is list:
         # Join results hyperlinks with newlines
         results = '\n'.join(
-            [f"[**{result}**]({val_wiki}/{result.replace(' ', '_')})" for result in results])
+            [f"[**{result}**]({_create_wiki_url(result)})" for result in results])
         embed = discord.Embed(
             title=f'Results for *{query}*', description=results, color=Color.blurple())
     else:
@@ -39,23 +45,21 @@ async def search_val(ctx, *query):
     await ctx.send(embed=embed)
 
 
-@bot.command(name='valget', help=f'Display info about an item from the {val_wiki} wiki')
+@bot.command(name='valget', help=f"Display a page's contents from the {wiki_url} wiki")
 async def get_val(ctx, *query):
-    results = valget(' '.join(query))
-    if type(results) is dict:
-        embed = discord.Embed(title=results['title'], url=results['url'],
-                              description=results['description'], color=Color.purple())
-        if results.get('fields'):
-            for name, value in results['fields'].items():
-                if type(value) is list:
-                    value = '\n'.join(value)
-
+    page = valget(' '.join(query))
+    if type(page) is dict:
+        embed = discord.Embed(title=page.get('title'),
+                              url=_create_wiki_url(page.get('title')),
+                              description=page.get('description'), color=Color.purple())
+        if page.get('fields'):
+            for name, value in page.get('fields').items():
                 embed.add_field(name=name, value=value)
 
-        if results['thumbnail']:
-            embed.set_thumbnail(url=results['thumbnail'])
+        if page.get('thumbnail'):
+            embed.set_thumbnail(url=page.get('thumbnail'))
     else:
-        embed = discord.Embed(title=f'{results}', color=Color.red())
+        embed = discord.Embed(title=f'{page}', color=Color.red())
 
     embed.set_footer(text=f'Requested by {ctx.author.display_name}')
     await ctx.send(embed=embed)
